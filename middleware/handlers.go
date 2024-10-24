@@ -83,10 +83,8 @@ func UpdateStock(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("unable to decode the body: %v", err)
 	}
-	updatedRows, err := getUpdatedStock(int64(id), stock)
-	if err != nil {
-		log.Fatalf("Unable to update the stock: %v", err)
-	}
+	updatedRows := getUpdatedStock(int64(id), stock)
+
 	msg := fmt.Sprintf("Updated successfully, total affected rows are: %v", updatedRows)
 	res := response{
 		ID:      int64(id),
@@ -101,10 +99,8 @@ func DeleteStock(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalf("Unable to convert the string to int64: %v", err)
 	}
-	deletedRow, err := deleteStock(int64(id))
-	if err != nil {
-		log.Fatalf("Unable to delete the stock: %v", err)
-	}
+	deletedRow := deleteStock(int64(id))
+	
 	msg := fmt.Sprintf("Stock deleted successfully. Affected row is %v", deletedRow)
 	res := response{
 		ID:      int64(id),
@@ -122,7 +118,7 @@ func insertStock(stock models.Stock) int64 {
 	if err != nil {
 		log.Fatalf("Unable to execute the sql query : %v", err)
 	}
-	fmt.Println("Inserted a single record : %v", id)
+	fmt.Printf("Inserted a single record : %v", id)
 	return id
 }
 
@@ -165,4 +161,36 @@ func getAllStocks() ([]models.Stock, error) {
 		stocks = append(stocks, stock)
 	}
 	return stocks, err
+}
+
+func getUpdatedStock(id int64, stock models.Stock) int64 {
+	db := createConnection()
+	defer db.Close()
+	sqlStatement := `UPDATE stocks SET name=$2, price=$3, company=$4 WHERE stockid=$1`
+	res, err := db.Exec(sqlStatement, id, stock.Name, stock.Price, stock.Company)
+	if err != nil {
+		log.Fatalf("Error executing the query: %v", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Fatalf("Error while checking the affected rows : %v", err)
+	}
+	fmt.Printf("Updated successfuly. Rows affected are %v", rowsAffected)
+	return rowsAffected
+}
+
+func deleteStock(id int64) int64 {
+	db := createConnection()
+	defer db.Close()
+	sqlStatement := `DELETE FROM stock WHERE stockid=$1`
+	res, err := db.Exec(sqlStatement, id)
+	if err != nil {
+		log.Fatalf("Unable to execute the query: %v", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		log.Fatalf("Error while checking the affected rows : %v", err)
+	}
+	fmt.Printf("Updated successfuly. Rows affected are %v", rowsAffected)
+	return rowsAffected
 }
